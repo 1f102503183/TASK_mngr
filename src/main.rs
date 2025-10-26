@@ -1,39 +1,38 @@
 use clap::Parser;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about = "CLI予定ツール TaskMngr", long_about = None)]
-
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-enum Commands {
-    // add task
+#[derive(clap::Subcommand)] // この挙列型がサブコマンドの種類と認識させる
+enum Actions {
     Add {
         title: String,
         #[arg(short, long)]
-        due: Option<String>,
+        date: String,
     },
-    List,
+    List {
+        #[arg(short, long)]
+        is_all: bool,
+    },
+    // prog,
+    // cmp,
+}
+
+//
+#[derive(Parser)]
+#[command(author, version, about = "CLI予定管理ツール TaskMngr", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Actions,
 }
 
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Add {title, due} => {
+        Actions::Add { title, date } => {
             println!("== Add TASK ==");
-            println!("the TASK title : {}",title);
-
-            if let Some(d) = due {
-                println!("limit: {}",d);
-            }else {
-                println!("limit: Nan");
-                            }
+            println!("the {} was added on {}", title, date);
         }
-        Commands::List => {
-            println!("== TASK list (not availabled now) ==");
+        Actions::List { is_all } => {
+            println!("== TASK list {} (not availabled now) ==", is_all);
         }
     }
 }
