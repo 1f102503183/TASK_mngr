@@ -1,4 +1,6 @@
+mod db;
 use clap::Parser;
+use std::path::Path;
 
 #[derive(clap::Subcommand)] // この挙列型がサブコマンドの種類と認識させる
 enum Actions {
@@ -12,7 +14,9 @@ enum Actions {
         is_all: bool,
     },
     // prog,
-    // cmp,
+    Cmp {
+        title: String,
+    },
 }
 
 //
@@ -23,7 +27,18 @@ struct Cli {
     command: Actions,
 }
 
+const DB_PATH: &str = "my_schedule.db";
+
 fn main() {
+    // connect to SQLlite
+    let conn = match db::setup_db(Path::new(DB_PATH)) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("データベース接続エラー：{}", e);
+            return;
+        }
+    };
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -33,6 +48,9 @@ fn main() {
         }
         Actions::List { is_all } => {
             println!("== TASK list {} (not availabled now) ==", is_all);
+        }
+        Actions::Cmp { title } => {
+            println!("==compleated TASL {} ! ==", title)
         }
     }
 }
