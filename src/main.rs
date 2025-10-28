@@ -30,7 +30,7 @@ struct Cli {
 const DB_PATH: &str = "my_schedule.db";
 
 fn main() {
-    // connect to SQLlite
+    // データベースに接続
     let conn = match db::setup_db(Path::new(DB_PATH)) {
         Ok(c) => c,
         Err(e) => {
