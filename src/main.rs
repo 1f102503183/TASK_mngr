@@ -11,11 +11,11 @@ enum Actions {
     },
     List {
         #[arg(short, long)]
-        is_all: bool,
+        include_done: bool,
     },
     // prog,
     Cmp {
-        title: String,
+        id: i64,
     },
 }
 
@@ -45,12 +45,29 @@ fn main() {
         Actions::Add { title, date } => {
             println!("== Add TASK ==");
             println!("the {} was added on {}", title, date);
+            if let Err(e) = db::add_task(&conn, &title, &date) {
+                eprintln!("err: {}", e);
+            }
         }
-        Actions::List { is_all } => {
-            println!("== TASK list {} (not availabled now) ==", is_all);
+        Actions::List { include_done } => {
+            println!("== TASK list {} (not availabled now) ==", include_done);
+            match db::list_task(&conn, include_done) {
+                Ok(tasks) => {
+                    for task in tasks {
+                        println!("db:{:?}", task);
+                    }
+                }
+
+                Err(e) => {
+                    eprint!("err: {}", e);
+                }
+            }
         }
-        Actions::Cmp { title } => {
-            println!("==compleated TASL {} ! ==", title)
+        Actions::Cmp { id } => {
+            println!("==compleated TASK {} ! ==", id);
+            if let Err(e) = db::complete_task(&conn, id) {
+                eprint!("err: {}", e)
+            }
         }
     }
 }

@@ -3,11 +3,11 @@ use rusqlite::{Connection, Result, params};
 use std::path::Path;
 
 #[derive(Debug)]
-pub struct TASK {
+pub struct Task {
     pub id: i64,
     pub title: String,
     pub date: NaiveDate,
-    pub prog: bool,
+    pub done: bool,
 }
 
 // データベースのセットアップ
@@ -15,11 +15,11 @@ pub fn setup_db(db_path: &Path) -> Result<Connection> {
     let conn = Connection::open(db_path)?;
 
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS schedules (
+        "CREATE TABLE IF NOT EXISTS tasks (
             id      INTEGER PRIMARY KEY,
             title   TEXT NOT NULL,
             date    TEXT NOT NULL,
-            prog    INTEGER NOT NULL DEFAULT 0
+            done INTEGER NOT DEFAULT 0
         )",
         (),
     )?;
@@ -27,31 +27,41 @@ pub fn setup_db(db_path: &Path) -> Result<Connection> {
     Ok(conn)
 }
 
-pub fn add_TASK(conn: &Connection, title: &str, date: &str, prog: &bool) -> Result<()> {
+// TASK追加
+pub fn add_task(conn: &Connection, title: &str, date: &str) -> Result<()> {
     conn.execute(
-        "INSERT INTO task (title,date,prog) VALUES(?1,?2)",
-        params![title, date, prog],
+        "INSERT INTO task (title,date,) VALUES(?1,?2)",
+        params![title, date],
     )?;
     Ok(())
 }
 
-pub fn list_TASK(conn: &Connection, include_done: bool) -> Result<Vec<tasks>> {
+// TASK list
+pub fn list_task(conn: &Connection, include_done: bool) -> Result<Vec<Task>> {
     let mut stmt = if include_done {
         // all
-        conn.prepare("SELECT id, title, date, prog FROM task ORDER BY date ASC")?
+        conn.prepare("SELECT id, title, date, FROM tasks ORDER BY date ASC")?
     } else {
-        conn.prepare("SELECT id, title, date, prog FROM task WHERE prog = 0 ORDER BY date ASC")?
+        conn.prepare("SELECT id, title, date, done FROM tasks WHERE done = 0 ORDER BY date ASC")?
     };
 
     let task_iter = stmt.query_map(params![], |row| {
-        // row.get() でカラムの値を指定の型で取得
-        Ok(TASK_item {
+        // gemini に考えてもらった　date のパース処理を追加
+        let date_str: String = row.get(2)?;
+        let parsed_date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d") // データベースに "%Y-%m-%d" 形式で保存されていると仮定
+            .map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    2,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?; // row.get() でカラムの値を指定の型で取得
+
+        Ok(Task {
             id: row.get(0)?,
             title: row.get(1)?,
-            // 簡略化のためNaiveDateへのパスは省略しているらしい？
-            date: row.get(2).unwrap_or_default(),
-            // SQLiteの INTEGER (0/1) を Rustの bool に変換
-            prog: row.get::<_, i32>(3)? != 0,
+            date: parsed_date,
+            done: row.get::<_, i32>(3)? != 0,
         })
     })?;
 
@@ -60,7 +70,7 @@ pub fn list_TASK(conn: &Connection, include_done: bool) -> Result<Vec<tasks>> {
     Ok(tasks)
 }
 
-pub fn complete_schedule(conn: &Connection, id: i64) -> Result<()> {
+pub fn complete_task(conn: &Connection, id: i64) -> Result<()> {
     conn.execute("UPDATE task SET done = 1 WHERE id = ?1", params![id])?;
     Ok(())
 }
