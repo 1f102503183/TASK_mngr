@@ -54,7 +54,10 @@ fn main() {
             match db::list_task(&conn, include_done) {
                 Ok(tasks) => {
                     for task in tasks {
-                        println!("db:{:?}", task);
+                        println!("ID:{}", task.id);
+                        println!("title:{}", task.title);
+                        println!("date:{}", task.date);
+                        println!("done:{}", task.done);
                     }
                 }
 
